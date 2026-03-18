@@ -110,11 +110,8 @@ A good next pass on the repo would be:
 
 - add a `requirements.txt`
 - add command-line arguments for training and prediction
-- include a short example workflow in the repo
 
 ## Example workflow
-
-After cleaning up paths, a typical workflow would look like this:
 
 ```bash
 python train.py
