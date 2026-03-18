@@ -104,24 +104,10 @@ It is useful if you want to:
 - inspect a small NumPy-only deep learning pipeline
 - experiment with building your own toy neural network framework
 
-## Known issues / cleanup opportunities
-
-The repo is interesting and useful for learning, but it currently has a few rough edges:
-
-- `model.py` imports `cnn.train`, while the repo files live at the project root.
-- `model.py` defaults to a weight path of `./sudoku/cnn/cnn_model.pkl`, which does not match the repo layout.
-- `test.py` also expects `cnn.model` and `./sudoku/cnn/...` paths.
-- `train.py` trains on **EMNIST digits**, but the final layer outputs **47 classes**, which looks mismatched for digit-only classification.
-- `train.py` saves to `license-plate/weights-plate.pkl` by default, while `model.py` tries to load a different filename/path.
-- The current scripts would benefit from a proper CLI and a `requirements.txt` file.
-
 ## Suggested next improvements
 
 A good next pass on the repo would be:
 
-- make imports consistent with the root-level layout
-- standardize the weight save/load path
-- align the final output dimension with the dataset split being used
 - add a `requirements.txt`
 - add command-line arguments for training and prediction
 - include a short example workflow in the repo
@@ -138,4 +124,13 @@ python test.py
 
 ## License
 
-MIT
+- MIT
+Learning project, use as you wish
+
+## Special thanks
+
+- @Acceleratorer - helping with the original idea and guiding
+- @SamsonZhangTheSalmon on youtube - making the video on nn from scratch
+- My innerself for not giving up
+
+## Accel ni naritai

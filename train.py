@@ -214,7 +214,7 @@ class CNNModel:
             Flatten(),
             Dense(32 * 7 * 7, 128), ReLU(),
             Dropout(rate=0.5),  # drop 50% of dense features to prevent memorization
-            Dense(128, 47)
+            Dense(128, 10) # 10 digits 0 -> 9
         ]
         self.loss_fn = CrossEntropyLoss()
 
@@ -245,7 +245,7 @@ class CNNModel:
             if hasattr(layer, 'step'):
                 layer.step(lr)
 
-    def save(self, filepath="license-plate/weights-plate.pkl"):
+    def save(self, filepath="./numpy-cnn/cnn-models.pkl"):
         self.eval() 
         with open(filepath, 'wb') as f:
             import pickle
@@ -274,13 +274,13 @@ def load_emnist():
     X = X.reshape(-1, 1, 28, 28).astype(np.float32) / 255.0
     y = train_ds.targets.numpy()
     
-    return X[:1000], y[:1000]
+    return X[:], y[:] # uses all dataset
 
 def start_training():
     X_train, y_train = load_emnist()
     model = CNNModel()
     
-    epochs = 2
+    epochs = 3
     batch_size = 64
     lr = 0.001
     num_batches = len(X_train) // batch_size

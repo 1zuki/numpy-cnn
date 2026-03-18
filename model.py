@@ -2,16 +2,16 @@ import numpy as np
 import pickle
 from PIL import Image, ImageOps
 import io
-import cnn.train
+import train
 
 class RedirectUnpickler(pickle.Unpickler):
     def find_class(self, module, name):
         if module == '__main__':
-            module = 'cnn.train'
+            module = 'train'
         return super().find_class(module, name)
 
 class DigitRecognizer:
-    def __init__(self, model_path="./sudoku/cnn/cnn_model.pkl"):
+    def __init__(self, model_path="./numpy-cnn/cnn-models.pkl"):
         """Loads the trained NumPy CNN model from disk."""
         try:
             with open(model_path, 'rb') as f:
@@ -41,7 +41,7 @@ class DigitRecognizer:
 
 if __name__ == "__main__":
     # instantiate the model
-    recognizer = DigitRecognizer("cnn_model.pkl")
+    recognizer = DigitRecognizer("./numpy-cnn/cnn-models.pkl")
     
-    digit = recognizer("./test-assets/test.png")
+    digit = recognizer("./numpy-cnn/test-assets/test.png")
     print(f"Predicted Digit: {digit}")
