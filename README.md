@@ -122,7 +122,7 @@ python test.py
 ## License
 
 - MIT
-Learning project, use as you wish
+- Learning project, use as you wish
 
 ## Special thanks
 
