@@ -10,7 +10,7 @@ This repository is a learning-focused project that builds the core pieces of a C
 - **MaxPool2D**, **ReLU**, **Flatten**, **Dense**, and **Dropout** layers
 - **Cross-entropy loss**
 - Adam-style parameter updates inside trainable layers
-- Training on the **EMNIST digits** dataset
+- Training on the **MNIST digits** dataset
 - Simple image-based digit inference with Pillow
 
 ## Repository structure
@@ -41,7 +41,7 @@ Input (1 x 28 x 28)
 → Dense(32 * 7 * 7, 128)
 → ReLU
 → Dropout(0.5)
-→ Dense(128, 47)
+→ Dense(128, 10)
 ```
 
 ## Requirements
@@ -68,11 +68,11 @@ python train.py
 
 What the training script currently does:
 
-- downloads or loads the **EMNIST digits** dataset
+- downloads or loads the **MNIST digits** dataset
 - reshapes images to `(N, 1, 28, 28)`
 - normalizes pixels to `[0, 1]`
-- trains on the first 1000 samples only
-- runs for 2 epochs with batch size 64
+- trains on the full dataset
+- runs for 3 epochs with batch size 64
 - saves weights with `pickle`
 
 ## Inference
@@ -131,3 +131,5 @@ python test.py
 - My innerself for not giving up
 
 ## Accel ni naritai
+
+## Kem ni naritai

@@ -11,12 +11,13 @@ class RedirectUnpickler(pickle.Unpickler):
         return super().find_class(module, name)
 
 class DigitRecognizer:
-    def __init__(self, model_path="./numpy-cnn/cnn-models.pkl"):
+    def __init__(self, model_path = "./numpy-cnn/cnn-models.pkl"):
         """Loads the trained NumPy CNN model from disk."""
         try:
             with open(model_path, 'rb') as f:
                 self.layers = RedirectUnpickler(f).load()
             print(f"Model successfully loaded from {model_path}")
+
         except FileNotFoundError:
             raise FileNotFoundError(f"Could not find {model_path}. Is the path correct bero?")
 
@@ -31,8 +32,6 @@ class DigitRecognizer:
         # run the Forward Pass
         for layer in self.layers:
             X = layer.forward(X)
-        
-        print(X)
 
         # geet the prediction
         prediction = np.argmax(X, axis=1)[0]

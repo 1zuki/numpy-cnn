@@ -6,7 +6,7 @@ import pickle
 import time
 
 # core engine: im2col & col2im
-def get_im2col_indices(x_shape, field_height, field_width, padding=1, stride=1):
+def get_im2col_indices(x_shape, field_height, field_width, padding = 1, stride = 1):
     N, C, H, W = x_shape
     out_height = (H + 2 * padding - field_height) // stride + 1
     out_width = (W + 2 * padding - field_width) // stride + 1
@@ -20,21 +20,23 @@ def get_im2col_indices(x_shape, field_height, field_width, padding=1, stride=1):
     i = i0.reshape(-1, 1) + i1.reshape(1, -1)
     j = j0.reshape(-1, 1) + j1.reshape(1, -1)
     k = np.repeat(np.arange(C), field_height * field_width).reshape(-1, 1)
+
     return k.astype(int), i.astype(int), j.astype(int)
 
-def im2col_indices(x, field_height, field_width, padding=1, stride=1):
+def im2col_indices(x, field_height, field_width, padding = 1, stride = 1):
     p = padding
-    x_padded = np.pad(x, ((0, 0), (0, 0), (p, p), (p, p)), mode='constant')
+    x_padded = np.pad(x, ((0, 0), (0, 0), (p, p), (p, p)), mode = 'constant')
     k, i, j = get_im2col_indices(x.shape, field_height, field_width, padding, stride)
     cols = x_padded[:, k, i, j]
     C = x.shape[1]
     cols = cols.transpose(1, 2, 0).reshape(field_height * field_width * C, -1)
+
     return cols
 
-def col2im_indices(cols, x_shape, field_height=3, field_width=3, padding=1, stride=1):
+def col2im_indices(cols, x_shape, field_height = 3, field_width = 3, padding = 1, stride = 1):
     N, C, H, W = x_shape
     H_padded, W_padded = H + 2 * padding, W + 2 * padding
-    x_padded = np.zeros((N, C, H_padded, W_padded), dtype=cols.dtype)
+    x_padded = np.zeros((N, C, H_padded, W_padded), dtype = cols.dtype)
     k, i, j = get_im2col_indices(x_shape, field_height, field_width, padding, stride)
     
     cols_reshaped = cols.reshape(C * field_height * field_width, -1, N)
@@ -43,11 +45,12 @@ def col2im_indices(cols, x_shape, field_height=3, field_width=3, padding=1, stri
     
     if padding == 0:
         return x_padded
+    
     return x_padded[:, :, padding:-padding, padding:-padding]
 
 # nn layers
 class Conv2D:
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0):
+    def __init__(self, in_channels, out_channels, kernel_size, stride = 1, padding = 0):
         self.out_channels = out_channels
         self.kernel_size = kernel_size
         self.stride = stride
@@ -72,19 +75,21 @@ class Conv2D:
         W_col = self.W.reshape(self.out_channels, -1)
 
         out = W_col @ self.X_col + self.b
+
         return out.reshape(self.out_channels, out_h, out_w, n).transpose(3, 0, 1, 2)
 
     def backward(self, dout):
         dout_reshaped = dout.transpose(1, 2, 3, 0).reshape(self.out_channels, -1)
         
         self.dW = (dout_reshaped @ self.X_col.T).reshape(self.W.shape)
-        self.db = np.sum(dout_reshaped, axis=1, keepdims=True)
+        self.db = np.sum(dout_reshaped, axis = 1, keepdims = True)
 
         W_reshape = self.W.reshape(self.out_channels, -1)
         dX_col = W_reshape.T @ dout_reshaped
+
         return col2im_indices(dX_col, self.X.shape, self.kernel_size, self.kernel_size, self.padding, self.stride)
 
-    def step(self, lr, beta1=0.9, beta2=0.999, eps=1e-8):
+    def step(self, lr, beta1 = 0.9, beta2 = 0.999, eps = 1e-8):
         self.t += 1
         self.mW = beta1 * self.mW + (1 - beta1) * self.dW
         self.vW = beta2 * self.vW + (1 - beta2) * (self.dW ** 2)
@@ -106,10 +111,11 @@ class MaxPool2D:
         out_w = (w - self.pool_size) // self.stride + 1
 
         X_reshaped = X.reshape(n * c, 1, h, w)
-        self.X_col = im2col_indices(X_reshaped, self.pool_size, self.pool_size, padding=0, stride=self.stride)
+        self.X_col = im2col_indices(X_reshaped, self.pool_size, self.pool_size, padding = 0, stride = self.stride)
 
-        self.max_indices = np.argmax(self.X_col, axis=0)
+        self.max_indices = np.argmax(self.X_col, axis = 0)
         out = self.X_col[self.max_indices, np.arange(self.X_col.shape[1])]
+
         return out.reshape(out_h, out_w, n, c).transpose(2, 3, 0, 1)
 
     def backward(self, dout):
@@ -118,7 +124,7 @@ class MaxPool2D:
         dout_flat = dout.transpose(2, 3, 0, 1).ravel()
         dX_col[self.max_indices, np.arange(self.X_col.shape[1])] = dout_flat
 
-        dX = col2im_indices(dX_col, (n * c, 1, h, w), self.pool_size, self.pool_size, padding=0, stride=self.stride)
+        dX = col2im_indices(dX_col, (n * c, 1, h, w), self.pool_size, self.pool_size, padding = 0, stride = self.stride)
         return dX.reshape(self.X.shape)
 
 class Dense:
@@ -135,10 +141,10 @@ class Dense:
 
     def backward(self, dout):
         self.dW = self.X.T @ dout
-        self.db = np.sum(dout, axis=0)
+        self.db = np.sum(dout, axis = 0)
         return dout @ self.W.T
 
-    def step(self, lr, beta1=0.9, beta2=0.999, eps=1e-8):
+    def step(self, lr, beta1 = 0.9, beta2 = 0.999, eps = 1e-8):
         self.t += 1
         self.mW = beta1 * self.mW + (1 - beta1) * self.dW
         self.vW = beta2 * self.vW + (1 - beta2) * (self.dW ** 2)
@@ -149,12 +155,12 @@ class Dense:
         self.b -= lr * (self.mb / (1 - beta1 ** self.t)) / (np.sqrt(self.vb / (1 - beta2 ** self.t)) + eps)
 
 class Dropout:
-    def __init__(self, rate=0.5):
+    def __init__(self, rate = 0.5):
         """
         rate: The probability of dropping a neuron (e.g., 0.5 means drop 50%).
         """
         self.rate = rate
-        self.mask = None
+        self.mask = None   
         self.training = True # flag to toggle between train/test modes
 
     def forward(self, X):
@@ -162,6 +168,7 @@ class Dropout:
             # create a binary mask using a binomial distribution
             # scale by 1 / (1 - rate) to keep the expected value of the activations consistent
             self.mask = np.random.binomial(1, 1 - self.rate, size=X.shape) / (1.0 - self.rate)
+        
             return X * self.mask
         else:
             # during inference -> sleep
@@ -175,6 +182,7 @@ class Flatten:
     def forward(self, X):
         self.X_shape = X.shape
         return X.reshape(X.shape[0], -1)
+    
     def backward(self, dout):
         return dout.reshape(self.X_shape)
 
@@ -182,6 +190,7 @@ class ReLU:
     def forward(self, X):
         self.X = X
         return np.maximum(0, X)
+
     def backward(self, dout):
         return dout * (self.X > 0)
 
@@ -189,31 +198,33 @@ class CrossEntropyLoss:
     def forward(self, logits, y):
         m = y.shape[0]
         # shift logits for numerical stability
-        exps = np.exp(logits - np.max(logits, axis=1, keepdims=True))
-        self.probs = exps / np.sum(exps, axis=1, keepdims=True)
+        exps = np.exp(logits - np.max(logits, axis = 1, keepdims = True))
+        self.probs = exps / np.sum(exps, axis = 1, keepdims = True)
         log_probs = -np.log(self.probs[np.arange(m), y] + 1e-15)
+
         return np.sum(log_probs) / m
 
     def backward(self, y):
         m = y.shape[0]
         dout = self.probs.copy()
         dout[np.arange(m), y] -= 1
+
         return dout / m
 
 # network assembly n trainning
 class CNNModel:
     def __init__(self):
         self.layers = [
-            Conv2D(1, 16, kernel_size=3, padding=1), ReLU(),
-            MaxPool2D(pool_size=2, stride=2),
+            Conv2D(1, 16, kernel_size = 3, padding = 1), ReLU(),
+            MaxPool2D(pool_size = 2, stride = 2),
             
-            Conv2D(16, 32, kernel_size=3, padding=1), ReLU(),
-            MaxPool2D(pool_size=2, stride=2),
-            Dropout(rate=0.25), # drop 25% of spatial features
+            Conv2D(16, 32, kernel_size = 3, padding = 1), ReLU(),
+            MaxPool2D(pool_size = 2, stride = 2),
+            Dropout(rate = 0.25), # drop 25% of spatial features
             
             Flatten(),
             Dense(32 * 7 * 7, 128), ReLU(),
-            Dropout(rate=0.5),  # drop 50% of dense features to prevent memorization
+            Dropout(rate = 0.5),  # drop 50% of dense features to prevent memorization
             Dense(128, 10) # 10 digits 0 -> 9
         ]
         self.loss_fn = CrossEntropyLoss()
@@ -240,52 +251,70 @@ class CNNModel:
         for layer in reversed(self.layers):
             dout = layer.backward(dout)
 
-    def step(self, lr=0.001):
+    def step(self, lr = 0.001):
         for layer in self.layers:
             if hasattr(layer, 'step'):
                 layer.step(lr)
 
-    def save(self, filepath="./numpy-cnn/cnn-models.pkl"):
+    def save(self, filepath = "./numpy-cnn/cnn-models.pkl"):
         self.eval() 
         with open(filepath, 'wb') as f:
             import pickle
             pickle.dump(self.layers, f)
             print(f"Model saved to {filepath}")
 
-def load_emnist():
-    print("Downloading/Loading EMNIST digits dataset")
-    train_ds = torchvision.datasets.EMNIST(root='./data', split='digits', train=True, download=True)
+def load_mnist():
+    print("Downloading/Loading MNIST dataset")
 
-    """cant be bothered changing"""
+    transform = transforms.ToTensor()
 
-#    transform = transforms.Compose([
-#        transforms.Grayscale(),
-#        transforms.Resize((28,28)),
-#       transforms.ToTensor()
-#    ])
+    train_ds = torchvision.datasets.MNIST(
+        root='./data', train=True, download=True, transform=transform
+    )
 
-#    train_ds = datasets.ImageFolder(
-#        root="./data/synthetic_digits",
-#        transform=transform
-#    )
+    test_ds = torchvision.datasets.MNIST(
+        root='./data', train=False, download=True, transform=transform
+    )
 
-    # extract transpose normalize
-    X = train_ds.data.numpy().transpose(0, 2, 1)
-    X = X.reshape(-1, 1, 28, 28).astype(np.float32) / 255.0
-    y = train_ds.targets.numpy()
+    # convert to numpy
+    X_train = train_ds.data.numpy().reshape(-1, 1, 28, 28).astype(np.float32) / 255.0
+    y_train = train_ds.targets.numpy()
+
+    X_test = test_ds.data.numpy().reshape(-1, 1, 28, 28).astype(np.float32) / 255.0
+    y_test = test_ds.targets.numpy()
+
+    return X_train, y_train, X_test, y_test
+
+def evaluate(model, X, y, batch_size = 64):
+    num_batches = len(X) // batch_size
+    total_correct = 0
+    total = 0
     
-    return X[:], y[:] # uses all dataset
+    for i in range(num_batches):
+        X_batch = X[i * batch_size : (i+1) * batch_size]
+        y_batch = y[i * batch_size : (i+1) * batch_size]
+        
+        logits = model.forward(X_batch)
+        preds = np.argmax(logits, axis=1)
+        
+        total_correct += np.sum(preds == y_batch)
+        total += len(y_batch)
+    
+    acc = total_correct / total
+
+    return acc
 
 def start_training():
-    X_train, y_train = load_emnist()
+    X_train, y_train, X_test, y_test = load_mnist()
     model = CNNModel()
     
     epochs = 3
     batch_size = 64
-    lr = 0.001
-    num_batches = len(X_train) // batch_size
-    
+    lr = 5e-4
+    num_batches = (len(X_train) + batch_size - 1) // batch_size
+
     print("\nTraining")
+
     for epoch in range(epochs):
         first_eta = True
 
@@ -293,6 +322,7 @@ def start_training():
         X_shuffled, y_shuffled = X_train[indices], y_train[indices]
         
         start_time = time.time()
+
         for i in range(num_batches):
             X_batch = X_shuffled[i * batch_size : (i+1) * batch_size]
             y_batch = y_shuffled[i * batch_size : (i+1) * batch_size]
@@ -305,15 +335,23 @@ def start_training():
 
             
             if i % 50 == 0:
-                acc = np.mean(np.argmax(logits, axis=1) == y_batch)
+                acc = np.mean(np.argmax(logits, axis = 1) == y_batch)
                 print(f"Epoch {epoch+1}/{epochs} | Batch {i}/{num_batches} | Loss: {loss:.4f} | Acc: {acc:.4f}")
 
             if first_eta and i != 0 and i % 50 == 0:
-                print(f"ETA: {(time.time() - start_time) * num_batches} \n")
+                elapsed = time.time() - start_time
+                eta = elapsed / (i+1) * num_batches
+                print(f"ETA: {eta:.1f}s", flush=True)
                 first_eta = False
                 
         lr *= 0.95
         print(f"Epoch {epoch+1} completed in {time.time() - start_time:.2f} seconds.")
+
+        model.eval()
+        test_acc = evaluate(model, X_test, y_test)
+        print(f"Test Accuracy: {test_acc:.4f}")
+
+        model.train()
         
     model.save()
 
